@@ -9,7 +9,7 @@ class RegisterSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = User
-        fields = ['username', 'email', 'password']
+        fields = ['email', 'password']
 
     def validate_email(self, value):
         if User.objects.filter(email=value).exists():
@@ -37,7 +37,7 @@ class RegisterResponseSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = User
-        fields = ['id', 'username', 'email', 'access', 'refresh']
+        fields = ['id', 'email', 'access', 'refresh']
 
     def get_access(self, obj):
         return str(RefreshToken.for_user(obj).access_token)
@@ -48,7 +48,6 @@ class RegisterResponseSerializer(serializers.ModelSerializer):
 
 class TransactionSerializer(serializers.ModelSerializer):
     transid = serializers.IntegerField(source='id', read_only=True)
-    name = serializers.CharField(allow_null=True)
     fee = serializers.DecimalField(max_digits=12, decimal_places=2, default=0.00)
     datetime = serializers.DateField(source='date')
     typeoftrans = serializers.CharField(source='type')
@@ -76,7 +75,22 @@ class TransactionCreateSerializer(serializers.ModelSerializer):
             self.fields['account'].queryset = Account.objects.filter(user=request.user)
             self.fields['category'].queryset = Category.objects.filter(user=request.user)
 
+    def validate_type(self, value):
+        valid_types = {choice[0] for choice in Category.TYPE_CHOICES}
+        if value not in valid_types:
+            raise serializers.ValidationError("Type must be either 'income' or 'expense'.")
+        return value
+
+    def validate(self, attrs):
+        category = attrs.get("category")
+        transaction_type = attrs.get("type")
+
+        if category and transaction_type and category.type != transaction_type:
+            raise serializers.ValidationError({
+                "category": "Category type must match the transaction type."
+            })
+        return attrs
+
     def create(self, validated_data):
         validated_data['user'] = self.context['request'].user
         return super().create(validated_data)
-

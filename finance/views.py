@@ -1,4 +1,5 @@
 from rest_framework import generics, status
+from rest_framework.exceptions import ValidationError
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework.permissions import IsAuthenticated
@@ -28,7 +29,6 @@ class RegisterView(generics.CreateAPIView):
             "message": "User registered successfully",
             "data": {
                 "id": user.id,
-                "username": user.username,
                 "email": user.email,
                 "access": str(refresh.access_token),
                 "refresh": str(refresh),
@@ -74,7 +74,6 @@ class EmailLoginView(APIView):
             "message": "Login successful",
             "data": {
                 "id": user.id,
-                "username": user.username,
                 "email": user.email,
                 "access": str(refresh.access_token),
                 "refresh": str(refresh),
@@ -90,7 +89,22 @@ class TransactionListView(generics.ListAPIView):
     permission_classes = [IsAuthenticated]
 
     def get_queryset(self):
-        return Transaction.objects.filter(user=self.request.user)
+        queryset = Transaction.objects.filter(user=self.request.user).select_related("account", "category")
+
+        transaction_type = self.request.query_params.get("type")
+        start_date = self.request.query_params.get("start_date")
+        end_date = self.request.query_params.get("end_date")
+
+        if transaction_type:
+            if transaction_type not in {choice[0] for choice in Transaction._meta.get_field("type").choices}:
+                raise ValidationError({"type": "Type must be either 'income' or 'expense'."})
+            queryset = queryset.filter(type=transaction_type)
+        if start_date:
+            queryset = queryset.filter(date__gte=start_date)
+        if end_date:
+            queryset = queryset.filter(date__lte=end_date)
+
+        return queryset
 
 
 # ==========================
@@ -99,4 +113,3 @@ class TransactionListView(generics.ListAPIView):
 class TransactionCreateView(generics.CreateAPIView):
     serializer_class = TransactionCreateSerializer
     permission_classes = [IsAuthenticated]
-
