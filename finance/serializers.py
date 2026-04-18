@@ -1,6 +1,8 @@
 from django.contrib.auth.models import User
 from rest_framework import serializers
 from rest_framework_simplejwt.tokens import RefreshToken
+from .models import UserProfile, Transaction, Category, Account
+
 
 class RegisterSerializer(serializers.ModelSerializer):
     password = serializers.CharField(write_only=True)
@@ -16,7 +18,6 @@ class RegisterSerializer(serializers.ModelSerializer):
 
     def create(self, validated_data):
         import secrets
-        from .models import UserProfile
         
         user = User.objects.create_user(
             username=validated_data['email'],  # 👈 username becomes email
@@ -43,3 +44,39 @@ class RegisterResponseSerializer(serializers.ModelSerializer):
 
     def get_refresh(self, obj):
         return str(RefreshToken.for_user(obj))
+
+
+class TransactionSerializer(serializers.ModelSerializer):
+    transid = serializers.IntegerField(source='id', read_only=True)
+    name = serializers.CharField(allow_null=True)
+    fee = serializers.DecimalField(max_digits=12, decimal_places=2, default=0.00)
+    datetime = serializers.DateField(source='date')
+    typeoftrans = serializers.CharField(source='type')
+    logo = serializers.CharField(allow_blank=True, default='')
+
+    class Meta:
+        model = Transaction
+        fields = ['transid', 'name', 'amount', 'fee', 'datetime', 'typeoftrans', 'logo']
+        read_only_fields = ['transid', 'datetime', 'typeoftrans']
+
+
+
+class TransactionCreateSerializer(serializers.ModelSerializer):
+    account = serializers.PrimaryKeyRelatedField(queryset=Account.objects.all())
+    category = serializers.PrimaryKeyRelatedField(queryset=Category.objects.all(), allow_null=True)
+
+    class Meta:
+        model = Transaction
+        fields = ['account', 'category', 'name', 'amount', 'fee', 'type', 'date', 'logo', 'note']
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        request = self.context.get('request')
+        if request and hasattr(request, 'user') and request.user.is_authenticated:
+            self.fields['account'].queryset = Account.objects.filter(user=request.user)
+            self.fields['category'].queryset = Category.objects.filter(user=request.user)
+
+    def create(self, validated_data):
+        validated_data['user'] = self.context['request'].user
+        return super().create(validated_data)
+

@@ -1,13 +1,12 @@
-# 24-Char ID Implementation Progress
+# Transaction APIs ✅ Updated with create + new fields
+**Run**: python manage.py makemigrations && python manage.py migrate
 
-## Approved Plan Steps:
-- [x] 1. Edit finance/models.py: Add UserProfile model
-- [ ] 2. Edit finance/serializers.py: Generate mongo_id on register, create profile
-- [ ] 3. Edit finance/views.py: Return profile.mongo_id in responses
-- [ ] 4. Edit finance/admin.py: Register UserProfile
-- [x] 5. Run makemigrations & migrate
-- [x] 6. Create signal/management for existing users
-- [ ] 7. Test register/login
-- [ ] 8. Complete
 
-Current: Starting step 1.
+## Test Instructions:
+1. Run `python manage.py runserver`
+2. Register: POST `/api/register/` {"email": "test@example.com", "password": "pass123"}
+3. Login: POST `/api/login/` → get access token
+4. Create sample transaction via Django admin (`python manage.py createsuperuser` first, then /admin/)
+5. GET `/api/finance/transactions/` with `Authorization: Bearer <access_token>`
+
+**Fields**: transid(id), name(category.name), amount, fee(0), datetime(date), typeoftrans(type), logo('')

@@ -15,10 +15,14 @@ class Transaction(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     account = models.ForeignKey(Account, on_delete=models.CASCADE)
     category = models.ForeignKey(Category, on_delete=models.SET_NULL, null=True)
+    name = models.CharField(max_length=100)
     amount = models.DecimalField(max_digits=12, decimal_places=2)
+    fee = models.DecimalField(max_digits=12, decimal_places=2, default=0)
     type = models.CharField(max_length=10)  # income / expense
     date = models.DateField()
     note = models.TextField(blank=True)
+    logo = models.CharField(max_length=500, blank=True)
+
 
 
 class UserProfile(models.Model):

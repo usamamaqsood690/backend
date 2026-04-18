@@ -1,10 +1,12 @@
 from rest_framework import generics, status
 from rest_framework.response import Response
 from rest_framework.views import APIView
+from rest_framework.permissions import IsAuthenticated
 from django.contrib.auth.models import User
 from django.contrib.auth import authenticate
 from rest_framework_simplejwt.tokens import RefreshToken
-from .serializers import RegisterSerializer
+from .serializers import RegisterSerializer, TransactionSerializer, TransactionCreateSerializer
+from .models import Transaction
 
 
 # ==========================
@@ -78,3 +80,23 @@ class EmailLoginView(APIView):
                 "refresh": str(refresh),
             }
         }, status=status.HTTP_200_OK)
+
+
+# ==========================
+# TRANSACTION LIST VIEW
+# ==========================
+class TransactionListView(generics.ListAPIView):
+    serializer_class = TransactionSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        return Transaction.objects.filter(user=self.request.user)
+
+
+# ==========================
+# TRANSACTION CREATE VIEW
+# ==========================
+class TransactionCreateView(generics.CreateAPIView):
+    serializer_class = TransactionCreateSerializer
+    permission_classes = [IsAuthenticated]
+
